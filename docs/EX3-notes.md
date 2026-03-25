@@ -1,7 +1,7 @@
 # EX3 Notes – EduBuilder
 
 ## 1. Final EX3 shape
-EduBuilder completes the EX1–EX3 progression as a tidy, local-first product that combines:
+EduBuilder completes the EX1–EX3 progression as a tidy, local-first **course builder and course catalog** that combines:
 - a FastAPI backend,
 - SQLite persistence through SQLModel,
 - a Streamlit user interface,
@@ -41,7 +41,7 @@ The EX3 database is reproducible through migrations plus seed data. SQLite artif
 Implemented in `frontend/app.py`.
 
 Responsibilities:
-- browse shared courses immediately,
+- browse shared courses immediately, even before signing in,
 - sign in or register,
 - create and edit courses through the backend API,
 - trigger AI-assisted drafting,
@@ -153,7 +153,7 @@ The async refresher is implemented in `scripts/refresh.py` and provides:
 ## 7. Security baseline
 The project includes the required EX3 security baseline:
 - hashed credentials,
-- JWT-protected routes,
+- JWT-protected create/edit/delete flows,
 - role/scope checks for admin-only endpoints,
 - tests for expired tokens,
 - tests for missing required scope.
@@ -171,21 +171,16 @@ The EX3 enhancement is a **weekly digest / recommendation summary** generated fo
 
 This enhancement improves usability without increasing project scope too much.
 
-## 9. Real local trace excerpt
-The assignment asks for a Logfire or Redis trace excerpt. A helper script is included so the excerpt can be captured from a real local run and injected into this file automatically:
+## 9. Real local service log excerpt
+The helper script `scripts/capture_trace_excerpt.py` injects a real local **service log excerpt** into this file after a Docker Compose run.
 
-```bash
-python scripts/capture_trace_excerpt.py
-```
+This excerpt demonstrates:
+- Alembic migrations running at startup,
+- the API becoming healthy,
+- worker execution,
+- and the background processing path that relies on Redis-backed coordination.
 
-That script runs:
-
-```bash
-docker compose logs worker --tail=20
-docker compose logs api --tail=20
-```
-
-and replaces the block below with a real local excerpt from your machine.
+If your instructor specifically requires a **Logfire trace** or a **Redis trace visualization** rather than service logs, replace the block below with that capture before final submission.
 
 <!-- TRACE_EXCERPT_START -->
 

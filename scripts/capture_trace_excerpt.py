@@ -12,8 +12,7 @@ def run_command(command: list[str]) -> str:
     return result.stdout.strip()
 
 
-
-def build_excerpt() -> str:
+def build_service_log_excerpt() -> str:
     worker_logs = run_command(["docker", "compose", "logs", "worker", "--tail=20"])
     api_logs = run_command(["docker", "compose", "logs", "api", "--tail=20"])
     return (
@@ -24,7 +23,6 @@ def build_excerpt() -> str:
         f"{api_logs}\n"
         "```"
     )
-
 
 
 def inject_excerpt(notes_path: Path, excerpt_block: str) -> None:
@@ -39,13 +37,12 @@ def inject_excerpt(notes_path: Path, excerpt_block: str) -> None:
     notes_path.write_text(new_content, encoding="utf-8")
 
 
-
 def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     notes_path = project_root / "docs" / "EX3-notes.md"
-    excerpt = build_excerpt()
+    excerpt = build_service_log_excerpt()
     inject_excerpt(notes_path, excerpt)
-    print("Injected a real local trace excerpt into docs/EX3-notes.md")
+    print("Injected a real local service log excerpt into docs/EX3-notes.md")
 
 
 if __name__ == "__main__":

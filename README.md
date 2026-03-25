@@ -1,6 +1,6 @@
 # EduBuilder
 
-EduBuilder is a small, local-first educational product built across EX1–EX3 around one consistent domain: users can register, create courses, browse shared courses, manage public or private visibility, and use AI-assisted flows to draft course content.
+EduBuilder is a small, local-first **course builder and course catalog** built across EX1–EX3 around one consistent domain: users can register, create courses, browse shared courses, manage public or private visibility, and use AI-assisted flows to draft course content.
 
 The final project combines a FastAPI backend, SQLite persistence through SQLModel and Alembic, a Streamlit interface, Redis, and an async worker. Everything is designed to run locally on a single laptop.
 
@@ -14,7 +14,8 @@ The final project combines a FastAPI backend, SQLite persistence through SQLMode
 
 ### EX2 – Friendly interface
 - Streamlit frontend that talks to the backend.
-- Users can browse shared courses immediately and create new courses after signing in.
+- Visitors can browse shared courses immediately.
+- Signed-in users can create, edit, save, and share their own courses.
 - Small extra feature: AI-assisted course drafting and course visibility management.
 
 ### EX3 – Full-stack microservices
@@ -28,9 +29,9 @@ The final project combines a FastAPI backend, SQLite persistence through SQLMode
 ## Main features
 - **FastAPI backend** with local SQLite storage.
 - **Alembic migrations** for reproducible database setup.
-- **JWT authentication** for protected endpoints.
+- **JWT authentication** for creating, editing, deleting, and draft-management flows.
 - **Role-aware authorization** for admin-only routes.
-- **Streamlit UI** for browsing and creating course content.
+- **Streamlit UI** for browsing shared courses and managing personal course content.
 - **Redis rate limiting** with standard response headers.
 - **Async worker** with bounded concurrency, retries, and Redis-backed idempotency.
 - **Schemathesis contract testing** against the OpenAPI schema.
@@ -242,14 +243,16 @@ Suggested grading flow:
 1. Start the stack.
 2. Open `/docs` for the API and `/health` for readiness.
 3. Open the Streamlit frontend.
-4. Register a user and create a course.
-5. Verify private versus public course behavior.
-6. Check admin-only route behavior.
-7. Inspect worker logs and Redis-backed processing.
+4. Browse shared courses anonymously.
+5. Register a user and create a private course.
+6. Share that course and verify that it appears in the public catalog.
+7. Check admin-only route behavior.
+8. Inspect worker logs and Redis-backed processing.
 
 ## Security baseline
 - Passwords are hashed with `passlib`.
 - Access is controlled with Bearer JWTs.
+- Creating, editing, deleting, and draft management require authentication.
 - Role/scope checks are enforced on admin-only endpoints.
 - Expired token and missing-scope scenarios are covered by tests.
 - Sensitive values belong in `.env`, not in source control.
@@ -266,14 +269,14 @@ The chosen enhancement is a **weekly digest / recommendation summary** for cours
 
 This keeps the product useful without expanding the scope into a large distributed system.
 
-## Real trace excerpt workflow
-A helper script is included to inject a real local worker/API log excerpt into `docs/EX3-notes.md`:
+## Local service log excerpt workflow
+A helper script is included to inject a real local **service log excerpt** into `docs/EX3-notes.md`:
 
 ```bash
 python scripts/capture_trace_excerpt.py
 ```
 
-Run it after `docker compose up` so the notes file contains a real trace excerpt from your machine.
+Run it after `docker compose up` so the notes file contains a real local excerpt from your machine.
 
 ## AI assistance
 AI tools were used as pair-programming aids for:

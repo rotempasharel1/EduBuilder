@@ -141,12 +141,14 @@ Why this works in CI:
 - worker tests validate retries/idempotency behavior,
 - Schemathesis loads the ASGI app directly and validates public OpenAPI routes without needing a separately hosted server.
 
-## Capturing the trace excerpt for EX3 notes
-After the stack runs locally, inject a real log excerpt into `docs/EX3-notes.md`:
+## Capturing the local service log excerpt for EX3 notes
+After the stack runs locally, inject a real service log excerpt into `docs/EX3-notes.md`:
 
 ```bash
 python scripts/capture_trace_excerpt.py
 ```
+
+If your rubric specifically asks for a Logfire trace or a Redis trace visualization, replace the generated block with that capture before final submission.
 
 ## Resetting local state
 If you want a clean local reset:
