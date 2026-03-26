@@ -171,63 +171,29 @@ The EX3 enhancement is a **weekly digest / recommendation summary** generated fo
 
 This enhancement improves usability without increasing project scope too much.
 
-## 9. Real local service log excerpt
-The helper script `scripts/capture_trace_excerpt.py` injects a real local **service log excerpt** into this file after a Docker Compose run.
+## 9. Real local Redis trace excerpt
+The helper script `scripts/capture_trace_excerpt.py` injects a real local **Redis monitor excerpt** into this file after a local Compose run.
 
-This excerpt demonstrates:
-- Alembic migrations running at startup,
-- the API becoming healthy,
-- worker execution,
-- and the background processing path that relies on Redis-backed coordination.
+The script:
+- attaches `redis-cli MONITOR` to the Redis service,
+- triggers a few API requests,
+- creates one public demo course,
+- runs a one-off worker refresh to exercise Redis-backed idempotency,
+- injects the captured Redis activity into the block below.
 
-If your instructor specifically requires a **Logfire trace** or a **Redis trace visualization** rather than service logs, replace the block below with that capture before final submission.
+Refresh the excerpt before submission:
+
+```bash
+uv run python scripts/capture_trace_excerpt.py
+```
+
+This gives a local trace artifact that matches the EX3 expectation more closely than generic service logs.
 
 <!-- TRACE_EXCERPT_START -->
 
 ```text
-# worker
-worker-1  |  + starlette==0.52.1
-worker-1  |  + starlette-testclient==0.4.1
-worker-1  |  + streamlit==1.55.0
-worker-1  |  + tenacity==9.1.4
-worker-1  |  + toml==0.10.2
-worker-1  |  + tornado==6.5.5
-worker-1  |  + typing-extensions==4.15.0
-worker-1  |  + typing-inspection==0.4.2
-worker-1  |  + tzdata==2025.3
-worker-1  |  + urllib3==2.6.3
-worker-1  |  + uvicorn==0.42.0
-worker-1  |  + watchdog==6.0.0
-worker-1  |  + websockets==16.0
-worker-1  |  + werkzeug==3.1.6
-worker-1  | INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-worker-1  | INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-worker-1  | INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-worker-1  | INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-worker-1  | [Worker] Starting background refresh worker...
-worker-1  | [Worker] No public courses found. Exiting.
-
-# api
-api-1  |  + tzdata==2025.3
-api-1  |  + urllib3==2.6.3
-api-1  |  + uvicorn==0.42.0
-api-1  |  + watchdog==6.0.0
-api-1  |  + websockets==16.0
-api-1  |  + werkzeug==3.1.6
-api-1  | INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-api-1  | INFO  [alembic.runtime.migration] Context impl SQLiteImpl.
-api-1  | INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-api-1  | INFO  [alembic.runtime.migration] Will assume non-transactional DDL.
-api-1  | INFO:     Will watch for changes in these directories: ['/app']
-api-1  | INFO:     Uvicorn running on http://0.0.0.0:8000 (Press CTRL+C to quit)
-api-1  | INFO:     Started reloader process [1] using StatReload
-api-1  | INFO:     Started server process [46]
-api-1  | INFO:     Waiting for application startup.
-api-1  | INFO:     Application startup complete.
-api-1  | INFO:     172.18.0.1:38298 - "GET /health HTTP/1.1" 200 OK
-api-1  | INFO:     172.18.0.1:42052 - "GET /health HTTP/1.1" 200 OK
-api-1  | INFO:     172.18.0.1:58058 - "GET /health HTTP/1.1" 200 OK
-api-1  | INFO:     172.18.0.1:58058 - "GET /favicon.ico HTTP/1.1" 404 Not Found
+[Run `uv run python scripts/capture_trace_excerpt.py` after `docker compose up -d --build`
+to replace this placeholder with a real local Redis MONITOR excerpt.]
 ```
 
 <!-- TRACE_EXCERPT_END -->
