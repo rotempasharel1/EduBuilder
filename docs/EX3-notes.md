@@ -1,7 +1,8 @@
-# EX3 Notes – EduBuilder
+# EX3 Notes – PoseAI Trainer
 
 ## 1. Final EX3 shape
-EduBuilder completes the EX1–EX3 progression as a tidy, local-first **course builder and course catalog** that combines:
+PoseAI Trainer completes the EX1–EX3 progression as a tidy, local-first **squat coaching plan catalog** that combines:
+
 - a FastAPI backend,
 - SQLite persistence through SQLModel,
 - a Streamlit user interface,
@@ -13,15 +14,15 @@ The system is intentionally scoped to stay understandable and runnable on one la
 ## 2. Services in the local architecture
 
 ### 2.1 API service
-Implemented in `backend/main.py`.
+Implemented in `poseai_backend/main.py`.
 
 Responsibilities:
+
 - authentication and authorization,
-- course CRUD,
-- public/shared course browsing,
-- personal course management,
+- plan CRUD,
+- public/shared plan browsing,
+- personal plan management,
 - admin-only routes,
-- AI-assisted course generation and draft endpoints,
 - health checks,
 - Redis-backed rate-limit headers.
 
@@ -29,26 +30,26 @@ Responsibilities:
 Implemented with SQLite, SQLModel, and Alembic migrations.
 
 Relevant files:
-- `backend/database.py`
-- `backend/models.py`
+
+- `poseai_backend/database.py`
+- `poseai_backend/models.py`
 - `alembic/`
 - `scripts/migrate.py`
 - `scripts/seed.py`
-
-The EX3 database is reproducible through migrations plus seed data. SQLite artifacts are intentionally excluded from version control.
 
 ### 2.3 Frontend service
 Implemented in `frontend/app.py`.
 
 Responsibilities:
-- browse shared courses,
+
+- browse shared plans immediately,
 - sign in or register,
-- create and edit courses through the backend API,
-- trigger AI-assisted drafting,
+- create and edit plans through the backend API,
 - keep the main flows simple enough to demonstrate quickly.
 
 ### 2.4 Redis service
 Redis is used for two focused EX3 tasks:
+
 - API rate limiting,
 - worker idempotency.
 
@@ -56,14 +57,16 @@ Redis is used for two focused EX3 tasks:
 Implemented in `scripts/refresh.py`.
 
 Responsibilities:
-- scan public courses,
-- generate a weekly digest or recommendation summary,
+
+- scan public plans,
+- generate a weekly digest,
 - retry transient failures,
 - prevent duplicate work through Redis-backed idempotency keys,
 - keep concurrency bounded.
 
 ## 3. Compose orchestration
 The project includes `compose.yaml` with these services:
+
 - `api`
 - `frontend`
 - `redis`
@@ -73,18 +76,6 @@ Start everything locally:
 
 ```bash
 docker compose up --build
-```
-
-Detached mode:
-
-```bash
-docker compose up -d --build
-```
-
-Stop the stack:
-
-```bash
-docker compose down
 ```
 
 ## 4. Verification steps
@@ -102,19 +93,22 @@ Expected response:
 
 ### 4.2 Rate-limit headers
 ```bash
-curl -i http://localhost:8000/courses
+curl -i http://localhost:8000/plans
 ```
 
 Expected headers include:
+
 - `X-RateLimit-Limit`
 - `X-RateLimit-Remaining`
 
 ### 4.3 Frontend reachability
 Open:
+
 - `http://localhost:8501`
 
 ### 4.4 OpenAPI contract
 Open:
+
 - `http://localhost:8000/docs`
 - `http://localhost:8000/openapi.json`
 
@@ -145,6 +139,7 @@ uv run pytest tests/test_api.py
 
 ## 6. Async refresher deliverable
 The async refresher is implemented in `scripts/refresh.py` and provides:
+
 - bounded concurrency via `anyio.CapacityLimiter`,
 - retries for transient failures,
 - Redis-backed idempotency keys,
@@ -152,6 +147,7 @@ The async refresher is implemented in `scripts/refresh.py` and provides:
 
 ## 7. Security baseline
 The project includes the required EX3 security baseline:
+
 - hashed credentials,
 - JWT-protected create/edit/delete flows,
 - role/scope checks for admin-only endpoints,
@@ -160,6 +156,7 @@ The project includes the required EX3 security baseline:
 
 ### Token rotation steps
 If a JWT secret is exposed locally:
+
 1. change `JWT_SECRET_KEY` in `.env`,
 2. restart the API service,
 3. log in again to issue fresh tokens,
@@ -167,19 +164,12 @@ If a JWT secret is exposed locally:
 5. confirm protected endpoints now reject tokens signed with the old secret.
 
 ## 8. Enhancement
-The EX3 enhancement is a **weekly digest / recommendation summary** generated for public courses by the background worker.
+The EX3 enhancement is a **weekly public-plan digest** generated for public plans by the background worker.
 
 This enhancement improves usability without increasing project scope too much.
 
 ## 9. Real local Redis trace excerpt
 The helper script `scripts/capture_trace_excerpt.py` injects a real local **Redis monitor excerpt** into this file after a local Compose run.
-
-The script:
-- attaches `redis-cli MONITOR` to the Redis service,
-- triggers a few API requests,
-- creates one public demo course,
-- runs a one-off worker refresh to exercise Redis-backed idempotency,
-- validates that real monitor lines were captured before writing this file.
 
 Refresh the excerpt before submission:
 
@@ -188,19 +178,22 @@ uv run python scripts/capture_trace_excerpt.py
 ```
 
 Important:
-- do **not** submit a broken Docker-error excerpt,
-- do **not** submit a placeholder as the final state,
+
+- do not submit the placeholder block below as the final artifact,
 - only keep the generated block below after a successful local Compose run.
 
 <!-- TRACE_EXCERPT_START -->
 
 ```text
-PLACEHOLDER ONLY.
+Trace excerpt not refreshed yet.
 
-Before submitting EX3, run:
+Run:
 uv run python scripts/capture_trace_excerpt.py
 
-This script will replace this block with a real local Redis monitor excerpt.
+Expected result:
+- Redis MONITOR lines appear here
+- worker-trigger output appears here
+
 Do not submit this placeholder block as the final EX3 artifact.
 ```
 
@@ -210,36 +203,22 @@ Do not submit this placeholder block as the final EX3 artifact.
 GitHub Actions is configured in `.github/workflows/ci.yml`.
 
 The pipeline:
-1. installs Python and `uv`,
-2. installs project dependencies,
-3. runs Alembic migrations,
+
+1. installs Python,
+2. installs dependencies,
+3. applies Alembic migrations,
 4. runs API tests,
 5. runs worker tests,
 6. runs Schemathesis contract tests.
 
-This gives a reproducible CI path for both `pytest` and OpenAPI contract validation.
-
 ## 11. Submission hygiene
 Before submitting, verify that the repository or ZIP does **not** include:
+
 - `.env`
 - `.venv/`
 - `.pytest_cache/`
 - `.hypothesis/`
 - `app.db`
 
-Also verify that all required files are committed and pushed to the GitHub repository.
-
 ## 12. AI Assistance
-AI tools were used to:
-- review the EX3 structure against the assignment brief,
-- tighten documentation and runbook wording,
-- spot mismatches between the repository notes and the implemented API/auth flows,
-- sanity-check the final submission checklist.
-
-All suggested changes were manually reviewed. Runtime-dependent items such as the Redis trace excerpt and the Compose workflow still require local execution and verification before submission.
-
-## 13. External checks that cannot be proven from code alone
-These items must still be verified manually because they are external to the codebase:
-- AWS Academy prerequisite completion,
-- whether a bonus screen capture was recorded,
-- whether the correct GitHub Classroom repository and any required tags were used.
+AI tools were used as pair-programming aids for architecture, tests, runbooks, and documentation. All generated outputs should be validated locally by running the stack and tests before submission.

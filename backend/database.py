@@ -15,10 +15,8 @@ engine = create_engine(
 
 def init_db() -> None:
     """
-    EX3 relies on Alembic migrations instead of create_all().
-
-    For quick EX1-style local experiments you may opt in to auto table creation by setting:
-        AUTO_CREATE_TABLES=1
+    EX3 uses Alembic migrations for reproducible schema creation.
+    You may opt in to auto-create tables locally by setting AUTO_CREATE_TABLES=1.
     """
     if os.environ.get("AUTO_CREATE_TABLES", "0") == "1":
         SQLModel.metadata.create_all(engine)

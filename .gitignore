@@ -1,47 +1,54 @@
-# Python cache and build artifacts
-__pycache__/
-*.py[cod]
-*.pyo
-*.pyd
-*.so
-build/
-dist/
-*.egg-info/
-.eggs/
-
 # Virtual environments
 .venv/
 venv/
 env/
 ENV/
 
-# Local environment files and secrets
+# Python cache / build
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+
+# Local environment files
 .env
 .env.*
 !.env.example
 
-# Local databases and artifacts
+# Databases and local artifacts
 app.db
 *.db
 *.sqlite3
 
-# Test and tool caches
+# Test caches
 .pytest_cache/
 .hypothesis/
 .mypy_cache/
 .ruff_cache/
-.pyre/
-.tox/
-.nox/
 .coverage
 htmlcov/
 
-# OS / editor files
-.DS_Store
-Thumbs.db
+# Existing project outputs
+outputs/
+temp_gdrive/
+*.pt
+*.csv
+*.mp4
+*.MOV
+*.mov
+*.avi
+*.mkv
+*.webm
+*.mpeg
+*.mpg
+
+# IDE / OS
 .vscode/
 .idea/
+.DS_Store
+Thumbs.db
 
-# Local logs and temp files
+# Logs
 *.log
 tmp/

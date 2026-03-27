@@ -1,0 +1,23 @@
+1. Copy all files from this package into the root of your repository.
+2. Keep your older ML experiment files if you want, but present the grading scope using the new README mapping.
+3. Run:
+   uv venv
+   uv pip install -r requirements.txt
+4. Run EX1 locally:
+   uv run uvicorn poseai_backend.main_ex1:app --reload
+   uv run pytest tests/test_ex1_api.py
+5. Run EX2 locally:
+   uv run streamlit run frontend/app_ex2.py
+6. Run EX3 locally:
+   uv run python -m scripts.migrate
+   uv run python scripts/seed.py
+   uv run uvicorn poseai_backend.main:app --reload
+   uv run streamlit run frontend/app.py
+7. Run full tests:
+   uv run pytest
+8. For the final EX3 notes, after Docker is up run:
+   uv run python scripts/capture_trace_excerpt.py
+
+Important:
+- docs/EX3-notes.md still contains a placeholder until you run the trace capture locally.
+- Do not submit the placeholder block.

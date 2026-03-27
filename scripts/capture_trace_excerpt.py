@@ -4,7 +4,6 @@ import argparse
 import os
 import signal
 import subprocess
-import sys
 import time
 from pathlib import Path
 
@@ -13,17 +12,6 @@ import requests
 START_MARKER = "<!-- TRACE_EXCERPT_START -->"
 END_MARKER = "<!-- TRACE_EXCERPT_END -->"
 DEFAULT_API_URL = os.environ.get("TRACE_API_URL", "http://localhost:8000")
-TRACE_USER_EMAIL = os.environ.get("TRACE_USER_EMAIL", "trace-demo@example.com")
-TRACE_USER_PASSWORD = os.environ.get("TRACE_USER_PASSWORD", "tracepass123")
-TRACE_USER_NAME = os.environ.get("TRACE_USER_NAME", "Trace Demo")
-
-COMMON_DOCKER_FAILURE_SNIPPETS = (
-    "failed to connect to the docker api",
-    "dockerdesktoplinuxengine",
-    "cannot connect to the docker daemon",
-    "is the docker daemon running",
-    "error during connect",
-)
 
 
 def run_command(command: list[str], timeout: int = 60, check: bool = True) -> subprocess.CompletedProcess[str]:
@@ -37,21 +25,7 @@ def run_command(command: list[str], timeout: int = 60, check: bool = True) -> su
 
 
 def ensure_docker_compose_available() -> None:
-    try:
-        result = run_command(["docker", "compose", "version"], timeout=20, check=True)
-    except FileNotFoundError as exc:
-        raise RuntimeError("Docker is not installed or not available on PATH.") from exc
-    except subprocess.CalledProcessError as exc:
-        details = (exc.stderr or exc.stdout or "").strip()
-        raise RuntimeError(f"Docker Compose is unavailable: {details}") from exc
-
-    text = (result.stdout + "\n" + result.stderr).strip().lower()
-    for snippet in COMMON_DOCKER_FAILURE_SNIPPETS:
-        if snippet in text:
-            raise RuntimeError(
-                "Docker Compose is installed but the Docker daemon is not reachable. "
-                "Start Docker Desktop or the Docker daemon and retry."
-            )
+    run_command(["docker", "compose", "version"], timeout=20, check=True)
 
 
 def wait_for_api(base_url: str, timeout_seconds: int = 60) -> None:
@@ -63,7 +37,7 @@ def wait_for_api(base_url: str, timeout_seconds: int = 60) -> None:
             response = requests.get(f"{base_url}/health", timeout=5)
             response.raise_for_status()
             return
-        except Exception as exc:  # pragma: no cover - local environment helper
+        except Exception as exc:
             last_error = exc
             time.sleep(2)
 
@@ -79,130 +53,58 @@ def start_redis_monitor() -> subprocess.Popen[str]:
     )
 
 
-def get_or_create_token(base_url: str) -> str:
-    register_payload = {
-        "email": TRACE_USER_EMAIL,
-        "password": TRACE_USER_PASSWORD,
-        "full_name": TRACE_USER_NAME,
-    }
-    register_response = requests.post(
-        f"{base_url}/auth/register",
-        json=register_payload,
-        timeout=15,
-    )
-    if register_response.status_code == 200:
-        return register_response.json()["access_token"]
-
-    login_payload = {
-        "email": TRACE_USER_EMAIL,
-        "password": TRACE_USER_PASSWORD,
-    }
-    login_response = requests.post(
-        f"{base_url}/auth/login",
-        json=login_payload,
-        timeout=15,
-    )
-    login_response.raise_for_status()
-    return login_response.json()["access_token"]
-
-
-def create_demo_course(base_url: str, token: str) -> None:
-    payload = {
-        "title": f"Trace Demo Course {int(time.time())}",
-        "content": "Short content created only to exercise Redis-backed flows.",
-        "is_public": True,
-    }
-    response = requests.post(
-        f"{base_url}/courses",
-        json=payload,
-        headers={"Authorization": f"Bearer {token}"},
-        timeout=15,
-    )
-    response.raise_for_status()
-
-
-def trigger_api_activity(base_url: str, token: str) -> None:
-    headers = {"Authorization": f"Bearer {token}"}
-    requests.get(f"{base_url}/courses", timeout=10).raise_for_status()
-    requests.get(f"{base_url}/courses/shared", timeout=10).raise_for_status()
-    requests.get(f"{base_url}/me", headers=headers, timeout=10).raise_for_status()
-    requests.get(f"{base_url}/courses/my", headers=headers, timeout=10).raise_for_status()
+def trigger_api_activity(base_url: str) -> None:
+    requests.get(f"{base_url}/plans", timeout=10).raise_for_status()
+    requests.get(f"{base_url}/plans/shared", timeout=10).raise_for_status()
 
 
 def trigger_worker_activity() -> str:
-    command = ["docker", "compose", "run", "--rm", "worker", "python", "scripts/refresh.py"]
-    result = run_command(command, timeout=120, check=True)
+    result = run_command(["docker", "compose", "run", "--rm", "worker", "python", "scripts/refresh.py"], timeout=120, check=True)
     return result.stdout.strip() or "(worker completed without stdout)"
 
 
 def stop_monitor(process: subprocess.Popen[str]) -> tuple[str, str]:
     if process.poll() is None:
         if os.name == "nt":
-            process.send_signal(signal.CTRL_BREAK_EVENT)  # pragma: no cover - windows only
+            process.send_signal(signal.CTRL_BREAK_EVENT)
         else:
             process.terminate()
 
     try:
         stdout, stderr = process.communicate(timeout=10)
-    except subprocess.TimeoutExpired:  # pragma: no cover - local environment helper
+    except subprocess.TimeoutExpired:
         process.kill()
         stdout, stderr = process.communicate()
 
     return stdout, stderr
 
 
-def tail_lines(text: str, max_lines: int = 40) -> str:
+def tail_lines(text: str, max_lines: int = 30) -> str:
     lines = [line.rstrip() for line in text.splitlines() if line.strip()]
     if not lines:
         return "(no lines captured)"
     return "\n".join(lines[-max_lines:])
 
 
-def contains_common_docker_failure(text: str) -> bool:
-    lowered = text.lower()
-    return any(snippet in lowered for snippet in COMMON_DOCKER_FAILURE_SNIPPETS)
-
-
-def validate_capture(monitor_stdout: str, monitor_stderr: str, worker_output: str) -> None:
-    if contains_common_docker_failure(monitor_stdout) or contains_common_docker_failure(monitor_stderr):
-        raise RuntimeError(
-            "Docker reported a daemon connectivity problem while capturing the Redis trace. "
-            "Make sure Docker is running and retry."
-        )
-
-    if "(no lines captured)" in tail_lines(monitor_stdout, max_lines=50):
-        raise RuntimeError(
-            "Redis MONITOR did not capture any lines. "
-            "Verify that the Compose stack is up and that the API and worker generated Redis activity."
-        )
-
-    if contains_common_docker_failure(worker_output):
-        raise RuntimeError(
-            "The worker trigger failed because Docker was not reachable. "
-            "Start Docker and rerun the capture."
-        )
-
-
 def build_redis_trace_excerpt(base_url: str) -> str:
     ensure_docker_compose_available()
     wait_for_api(base_url)
-    token = get_or_create_token(base_url)
     monitor_process = start_redis_monitor()
 
     try:
         time.sleep(2)
-        create_demo_course(base_url, token)
-        trigger_api_activity(base_url, token)
+        trigger_api_activity(base_url)
         worker_output = trigger_worker_activity()
         time.sleep(2)
     finally:
         monitor_stdout, monitor_stderr = stop_monitor(monitor_process)
 
-    validate_capture(monitor_stdout, monitor_stderr, worker_output)
-
-    monitor_block = tail_lines(monitor_stdout, max_lines=50)
+    monitor_block = tail_lines(monitor_stdout, max_lines=40)
     worker_block = tail_lines(worker_output, max_lines=20)
     stderr_block = tail_lines(monitor_stderr, max_lines=20) if monitor_stderr.strip() else "(empty)"
+
+    if monitor_block == "(no lines captured)":
+        raise RuntimeError("No Redis MONITOR lines were captured.")
 
     return (
         "```text\n"
@@ -243,15 +145,8 @@ def main() -> None:
     project_root = Path(__file__).resolve().parents[1]
     notes_path = project_root / "docs" / "EX3-notes.md"
 
-    try:
-        excerpt = build_redis_trace_excerpt(args.api_url)
-        inject_excerpt(notes_path, excerpt)
-    except Exception as exc:
-        raise SystemExit(
-            "Trace capture failed and docs/EX3-notes.md was left unchanged.\n"
-            f"Reason: {exc}"
-        ) from exc
-
+    excerpt = build_redis_trace_excerpt(args.api_url)
+    inject_excerpt(notes_path, excerpt)
     print("Injected a real local Redis trace excerpt into docs/EX3-notes.md")
 
 

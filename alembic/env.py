@@ -1,43 +1,29 @@
-from __future__ import annotations
-
-import os
 from logging.config import fileConfig
+import os
 
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 
-from backend import models  # noqa: F401 - ensures model metadata is registered
+from poseai_backend import models  # noqa: F401
 
 config = context.config
 
+if "DATABASE_URL" in os.environ:
+    config.set_main_option("sqlalchemy.url", os.environ["DATABASE_URL"])
+
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
-
-
-def get_database_url() -> str:
-    return os.environ.get("DATABASE_URL", config.get_main_option("sqlalchemy.url"))
-
-
-config.set_main_option("sqlalchemy.url", get_database_url())
 
 target_metadata = SQLModel.metadata
 
 
 def run_migrations_offline() -> None:
-    url = get_database_url()
-    context.configure(
-        url=url,
-        target_metadata=target_metadata,
-        literal_binds=True,
-        dialect_opts={"paramstyle": "named"},
-        compare_type=True,
-        compare_server_default=True,
-    )
+    url = config.get_main_option("sqlalchemy.url")
+    context.configure(url=url, target_metadata=target_metadata, literal_binds=True, compare_type=True)
 
     with context.begin_transaction():
         context.run_migrations()
-
 
 
 def run_migrations_online() -> None:
@@ -48,12 +34,7 @@ def run_migrations_online() -> None:
     )
 
     with connectable.connect() as connection:
-        context.configure(
-            connection=connection,
-            target_metadata=target_metadata,
-            compare_type=True,
-            compare_server_default=True,
-        )
+        context.configure(connection=connection, target_metadata=target_metadata, compare_type=True)
 
         with context.begin_transaction():
             context.run_migrations()

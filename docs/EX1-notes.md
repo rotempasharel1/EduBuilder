@@ -1,54 +1,43 @@
-# EX1 Notes – EduBuilder Backend
+# EX1 Notes – PoseAI Trainer Backend
 
 This file presents **EX1 separately** from the richer EX3 system.
 
 ## Goal
-Show a clean FastAPI backend for one core resource: `Course`.
+Show a clean FastAPI backend for one core resource: `Plan`.
 
 ## Files used for EX1
-- `backend/main_ex1.py`
+- `poseai_backend/main_ex1.py`
 - `tests/test_ex1_api.py`
-- `docs/EX1-notes.md`
 
 ## Local setup
 ```bash
 uv venv
-uv sync
+uv pip install -r requirements.txt
 ```
 
 ## Run the API
 ```bash
-uv run uvicorn backend.main_ex1:app --reload
+uv run uvicorn poseai_backend.main_ex1:app --reload
 ```
 
 ## What this version includes
 - FastAPI backend
-- one core resource: `Course`
+- one core resource: `Plan`
 - CRUD endpoints:
-  - `GET /courses`
-  - `GET /courses/{course_id}`
-  - `POST /courses`
-  - `PUT /courses/{course_id}`
-  - `DELETE /courses/{course_id}`
+  - `GET /plans`
+  - `GET /plans/{plan_id}`
+  - `POST /plans`
+  - `PUT /plans/{plan_id}`
+  - `DELETE /plans/{plan_id}`
 - health endpoint: `GET /health`
 - no authentication
 - simple in-memory data store
-- pytest coverage for listing and create/update/delete happy-path flows
+- pytest coverage for the happy-path CRUD flow
 
 ## Tests
 ```bash
 uv run pytest tests/test_ex1_api.py
 ```
 
-## Notes on scope
-The full repository later evolved into EX3 and includes authentication, SQLite persistence, Redis, worker flows, and AI features.
-
-For the EX1 grading scope, `backend/main_ex1.py` keeps the implementation small and focused on the backend foundations required by the assignment.
-
 ## AI Assistance
-AI tools were used to:
-- review route naming and response consistency,
-- tighten the README and notes wording,
-- sanity-check the CRUD test coverage.
-
-All suggested changes were manually reviewed and verified locally through code inspection and pytest.
+AI tools were used to help draft the file structure and test outline. All code should be reviewed locally and verified by running the API and pytest before submission.

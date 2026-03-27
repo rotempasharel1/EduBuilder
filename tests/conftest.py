@@ -10,10 +10,10 @@ ROOT = Path(__file__).resolve().parents[1]
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from backend.auth import get_password_hash
-from backend.database import get_session
-from backend.main import app
-from backend.models import User
+from poseai_backend.auth import get_password_hash
+from poseai_backend.database import get_session
+from poseai_backend.main import app
+from poseai_backend.models import User
 
 sqlite_url = "sqlite:///:memory:"
 
@@ -62,7 +62,7 @@ def admin_user_fixture(session: Session):
     user = User(
         email="admin@example.com",
         hashed_password=get_password_hash("adminpass123"),
-        full_name="Admin User",
+        full_name="Admin Coach",
         role="admin",
     )
     session.add(user)

@@ -7,35 +7,40 @@ from typing import Dict
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
+app = FastAPI(title="PoseAI Trainer EX1 API", version="1.0.0")
 
-app = FastAPI(title="EduBuilder EX1 API", version="1.0.0")
 
-
-class CourseCreate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    content: str = Field(min_length=1)
+class PlanCreate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    goal: str = Field(min_length=1, max_length=240)
+    cues: str = Field(min_length=1)
+    level: str = Field(min_length=1, max_length=40)
     is_public: bool = True
 
 
-class CourseUpdate(BaseModel):
-    title: str = Field(min_length=1, max_length=200)
-    content: str = Field(min_length=1)
+class PlanUpdate(BaseModel):
+    title: str = Field(min_length=1, max_length=120)
+    goal: str = Field(min_length=1, max_length=240)
+    cues: str = Field(min_length=1)
+    level: str = Field(min_length=1, max_length=40)
     is_public: bool = True
 
 
-class Course(BaseModel):
+class Plan(BaseModel):
     id: int
     title: str
-    content: str
+    goal: str
+    cues: str
+    level: str
     is_public: bool = True
     created_at: str
 
 
-COURSES: Dict[int, Course] = {}
+PLANS: Dict[int, Plan] = {}
 _NEXT_ID = count(1)
 
 
-def _new_course_id() -> int:
+def _new_plan_id() -> int:
     return next(_NEXT_ID)
 
 
@@ -48,52 +53,56 @@ def health() -> dict[str, str]:
     return {"status": "ok", "version": "1.0.0"}
 
 
-@app.get("/courses", response_model=list[Course])
-def list_courses() -> list[Course]:
-    return list(COURSES.values())
+@app.get("/plans", response_model=list[Plan])
+def list_plans() -> list[Plan]:
+    return list(PLANS.values())
 
 
-@app.get("/courses/{course_id}", response_model=Course)
-def get_course(course_id: int) -> Course:
-    course = COURSES.get(course_id)
-    if course is None:
-        raise HTTPException(status_code=404, detail="Course not found")
-    return course
+@app.get("/plans/{plan_id}", response_model=Plan)
+def get_plan(plan_id: int) -> Plan:
+    plan = PLANS.get(plan_id)
+    if plan is None:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    return plan
 
 
-@app.post("/courses", response_model=Course)
-def create_course(payload: CourseCreate) -> Course:
-    course = Course(
-        id=_new_course_id(),
+@app.post("/plans", response_model=Plan)
+def create_plan(payload: PlanCreate) -> Plan:
+    plan = Plan(
+        id=_new_plan_id(),
         title=payload.title,
-        content=payload.content,
+        goal=payload.goal,
+        cues=payload.cues,
+        level=payload.level,
         is_public=payload.is_public,
         created_at=_now_iso(),
     )
-    COURSES[course.id] = course
-    return course
+    PLANS[plan.id] = plan
+    return plan
 
 
-@app.put("/courses/{course_id}", response_model=Course)
-def update_course(course_id: int, payload: CourseUpdate) -> Course:
-    existing = COURSES.get(course_id)
+@app.put("/plans/{plan_id}", response_model=Plan)
+def update_plan(plan_id: int, payload: PlanUpdate) -> Plan:
+    existing = PLANS.get(plan_id)
     if existing is None:
-        raise HTTPException(status_code=404, detail="Course not found")
+        raise HTTPException(status_code=404, detail="Plan not found")
 
     updated = existing.model_copy(
         update={
             "title": payload.title,
-            "content": payload.content,
+            "goal": payload.goal,
+            "cues": payload.cues,
+            "level": payload.level,
             "is_public": payload.is_public,
         }
     )
-    COURSES[course_id] = updated
+    PLANS[plan_id] = updated
     return updated
 
 
-@app.delete("/courses/{course_id}")
-def delete_course(course_id: int) -> dict[str, str]:
-    if course_id not in COURSES:
-        raise HTTPException(status_code=404, detail="Course not found")
-    del COURSES[course_id]
+@app.delete("/plans/{plan_id}")
+def delete_plan(plan_id: int) -> dict[str, str]:
+    if plan_id not in PLANS:
+        raise HTTPException(status_code=404, detail="Plan not found")
+    del PLANS[plan_id]
     return {"status": "success"}

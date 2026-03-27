@@ -2,7 +2,7 @@ from hypothesis import HealthCheck, settings
 import schemathesis
 from fastapi.testclient import TestClient
 
-from backend.main import app
+from poseai_backend.main import app
 
 client = TestClient(app)
 
@@ -18,23 +18,19 @@ def test_health_contract(case):
     case.call_and_validate()
 
 
-def test_public_courses_list_contract():
-    response = client.get("/courses")
+def test_public_plans_list_contract():
+    response = client.get("/plans")
     assert response.status_code == 200
-
-    data = response.json()
-    assert isinstance(data, list)
+    assert isinstance(response.json(), list)
 
 
-def test_shared_courses_contract():
-    response = client.get("/courses/shared")
+def test_shared_plans_contract():
+    response = client.get("/plans/shared")
     assert response.status_code == 200
-
-    data = response.json()
-    assert isinstance(data, list)
+    assert isinstance(response.json(), list)
 
 
-def test_courses_mine_requires_auth():
-    response = client.get("/courses", params={"mine": True})
+def test_plans_mine_requires_auth():
+    response = client.get("/plans", params={"mine": True})
     assert response.status_code == 401
     assert response.json()["detail"] == "Authentication required for mine=true"

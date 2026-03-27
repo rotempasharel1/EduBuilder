@@ -8,7 +8,7 @@ from passlib.context import CryptContext
 
 pwd_context = CryptContext(schemes=["pbkdf2_sha256"], deprecated="auto")
 
-SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "supersecretkey_change_in_production")
+SECRET_KEY = os.environ.get("JWT_SECRET_KEY", "change-me")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7
 

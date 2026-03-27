@@ -1,4 +1,5 @@
-import json
+from __future__ import annotations
+
 import os
 from contextlib import asynccontextmanager
 from datetime import timedelta
@@ -7,8 +8,6 @@ from typing import Optional
 from fastapi import Depends, FastAPI, HTTPException, Security
 from fastapi.responses import JSONResponse
 from fastapi.security import HTTPAuthorizationCredentials, SecurityScopes
-from google import genai
-from google.genai import types
 from redis.asyncio import Redis
 from sqlmodel import Session, select
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -23,17 +22,7 @@ from .auth import (
     verify_password,
 )
 from .database import get_session, init_db
-from .models import (
-    ChatRequest,
-    Course,
-    CourseCreate,
-    CourseGenerationResponse,
-    CourseRead,
-    DraftState,
-    EmailLoginRequest,
-    EmailRegisterRequest,
-    User,
-)
+from .models import EmailLoginRequest, EmailRegisterRequest, Plan, PlanCreate, PlanRead, User
 
 
 @asynccontextmanager
@@ -44,10 +33,14 @@ async def lifespan(app: FastAPI):
         decode_responses=True,
     )
     yield
-    await app.state.redis.aclose()
+    close_method = getattr(app.state.redis, "aclose", None) or getattr(app.state.redis, "close", None)
+    if close_method is not None:
+        result = close_method()
+        if hasattr(result, "__await__"):
+            await result
 
 
-app = FastAPI(title="EduBuilder Course Builder API", lifespan=lifespan)
+app = FastAPI(title="PoseAI Trainer API", lifespan=lifespan)
 
 
 class RateLimitMiddleware(BaseHTTPMiddleware):
@@ -94,10 +87,6 @@ app.add_middleware(RateLimitMiddleware)
 @app.get("/health")
 def health_check():
     return {"status": "ok", "version": "1.0.0"}
-
-
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY", "")
-genai_client = genai.Client(api_key=GEMINI_API_KEY) if GEMINI_API_KEY else None
 
 
 def get_current_user(
@@ -158,18 +147,20 @@ def build_token_for_user(user: User) -> str:
     )
 
 
-def enrich_courses_with_owner(courses: list[Course], session: Session) -> list[dict]:
+def enrich_plans_with_owner(plans: list[Plan], session: Session) -> list[dict]:
     enriched: list[dict] = []
-    for course in courses:
-        owner = session.get(User, course.owner_id)
-        item = CourseRead(
-            id=course.id,
-            owner_id=course.owner_id,
-            title=course.title,
-            content=course.content,
-            is_public=course.is_public,
-            weekly_digest=course.weekly_digest,
-            created_at=course.created_at,
+    for plan in plans:
+        owner = session.get(User, plan.owner_id)
+        item = PlanRead(
+            id=plan.id,
+            owner_id=plan.owner_id,
+            title=plan.title,
+            goal=plan.goal,
+            cues=plan.cues,
+            level=plan.level,
+            is_public=plan.is_public,
+            weekly_digest=plan.weekly_digest,
+            created_at=plan.created_at,
             owner_name=owner.full_name if owner else "Unknown",
             owner_email=owner.email if owner else "Unknown",
         )
@@ -225,297 +216,140 @@ def me(user: User = Depends(get_current_user)):
     }
 
 
-@app.post("/chat/generate_course")
-def generate_course(payload: ChatRequest, user: User = Depends(get_current_user)):
-    if not genai_client:
-        raise HTTPException(
-            status_code=400,
-            detail="Gemini API Key is not configured on this server. AI features are disabled.",
-        )
-
-    prompt = payload.prompt.strip()
-    context = (payload.context or "").strip()
-
-    try:
-        system_instructions = (
-            "You are an expert AI teacher that builds educational courses chapter by chapter. "
-            "Generate exactly 5 pages, then exactly 5 multiple-choice questions, then a short "
-            "follow-up message. All output must be in English and valid JSON matching the provided schema."
-        )
-
-        full_prompt = f"Context/Previous Lesson context: {context}\n\nUser Prompt: {prompt}"
-
-        response = genai_client.models.generate_content(
-            model="gemini-2.5-flash",
-            contents=full_prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=system_instructions,
-                temperature=0.7,
-                top_p=0.95,
-                max_output_tokens=16384,
-                response_mime_type="application/json",
-                response_schema=CourseGenerationResponse,
-            ),
-        )
-
-        if not response.text:
-            raise HTTPException(status_code=500, detail="Gemini returned an empty response.")
-
-        return json.loads(response.text)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=f"Gemini error: {exc}")
-
-
-@app.post("/chat/draft")
-def save_chat_draft(
-    draft: DraftState,
-    user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    try:
-        draft_content = draft.model_dump_json()
-        existing = session.exec(
-            select(Course).where(
-                Course.owner_id == user.id,
-                Course.title == "__DRAFT_STATE__",
-            )
-        ).first()
-
-        if existing:
-            existing.content = draft_content
-            session.add(existing)
-        else:
-            session.add(
-                Course(
-                    owner_id=user.id,
-                    title="__DRAFT_STATE__",
-                    content=draft_content,
-                    is_public=False,
-                )
-            )
-
-        session.commit()
-        return {"status": "ok"}
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@app.get("/chat/draft")
-def load_chat_draft(
-    user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    try:
-        existing = session.exec(
-            select(Course).where(
-                Course.owner_id == user.id,
-                Course.title == "__DRAFT_STATE__",
-            )
-        ).first()
-        if existing:
-            return json.loads(existing.content)
-        return None
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@app.delete("/chat/draft")
-def delete_chat_draft(
-    user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    try:
-        existing = session.exec(
-            select(Course).where(
-                Course.owner_id == user.id,
-                Course.title == "__DRAFT_STATE__",
-            )
-        ).first()
-        if existing:
-            session.delete(existing)
-            session.commit()
-        return {"status": "ok"}
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@app.get("/courses")
-def list_courses(
+@app.get("/plans")
+def list_plans(
     session: Session = Depends(get_session),
     mine: bool = False,
     user: User | None = Depends(get_optional_user),
 ):
-    try:
-        stmt = select(Course).where(Course.title != "__DRAFT_STATE__")
+    stmt = select(Plan)
 
-        if mine:
-            if not user:
-                raise HTTPException(status_code=401, detail="Authentication required for mine=true")
-            stmt = stmt.where(Course.owner_id == user.id)
-        else:
-            stmt = stmt.where(Course.is_public.is_(True))
+    if mine:
+        if not user:
+            raise HTTPException(status_code=401, detail="Authentication required for mine=true")
+        stmt = stmt.where(Plan.owner_id == user.id)
+    else:
+        stmt = stmt.where(Plan.is_public.is_(True))
 
-        courses = session.exec(stmt.order_by(Course.created_at.desc())).all()
-        return enrich_courses_with_owner(courses, session)
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    plans = session.exec(stmt.order_by(Plan.created_at.desc())).all()
+    return enrich_plans_with_owner(plans, session)
 
 
-@app.get("/courses/shared")
-def get_shared_courses(session: Session = Depends(get_session)):
-    try:
-        courses = session.exec(
-            select(Course)
-            .where(Course.is_public.is_(True), Course.title != "__DRAFT_STATE__")
-            .order_by(Course.created_at.desc())
-        ).all()
-        return enrich_courses_with_owner(courses, session)
-    except Exception:
-        return []
+@app.get("/plans/shared")
+def get_shared_plans(session: Session = Depends(get_session)):
+    plans = session.exec(
+        select(Plan)
+        .where(Plan.is_public.is_(True))
+        .order_by(Plan.created_at.desc())
+    ).all()
+    return enrich_plans_with_owner(plans, session)
 
 
-@app.get("/courses/my")
-def get_my_courses(
+@app.get("/plans/my")
+def get_my_plans(
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    try:
-        courses = session.exec(
-            select(Course)
-            .where(Course.owner_id == user.id, Course.title != "__DRAFT_STATE__")
-            .order_by(Course.created_at.desc())
-        ).all()
-        return enrich_courses_with_owner(courses, session)
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    plans = session.exec(
+        select(Plan)
+        .where(Plan.owner_id == user.id)
+        .order_by(Plan.created_at.desc())
+    ).all()
+    return enrich_plans_with_owner(plans, session)
 
 
-@app.get("/courses/{course_id}")
-def get_course(
-    course_id: str,
+@app.get("/plans/{plan_id}")
+def get_plan(
+    plan_id: str,
     session: Session = Depends(get_session),
     user: User | None = Depends(get_optional_user),
 ):
-    try:
-        course = session.get(Course, course_id)
-        if not course:
-            raise HTTPException(status_code=404, detail="Course not found")
+    plan = session.get(Plan, plan_id)
+    if not plan:
+        raise HTTPException(status_code=404, detail="Plan not found")
 
-        if not course.is_public:
-            if user is None or (user.id != course.owner_id and user.role != "admin"):
-                raise HTTPException(status_code=403, detail="Course is private")
+    if not plan.is_public:
+        if user is None or (user.id != plan.owner_id and user.role != "admin"):
+            raise HTTPException(status_code=403, detail="Plan is private")
 
-        enriched = enrich_courses_with_owner([course], session)
-        return enriched[0]
-    except HTTPException:
-        raise
-    except Exception as exc:
-        raise HTTPException(status_code=500, detail=str(exc))
+    enriched = enrich_plans_with_owner([plan], session)
+    return enriched[0]
 
 
-@app.post("/courses")
-def save_course(
-    project: CourseCreate,
+@app.post("/plans")
+def create_plan(
+    payload: PlanCreate,
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    try:
-        new_course = Course(
-            owner_id=user.id,
-            title=project.title,
-            content=project.content,
-            is_public=project.is_public,
-        )
-        session.add(new_course)
-        session.commit()
-        session.refresh(new_course)
-        return new_course
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
+    new_plan = Plan(
+        owner_id=user.id,
+        title=payload.title,
+        goal=payload.goal,
+        cues=payload.cues,
+        level=payload.level,
+        is_public=payload.is_public,
+    )
+    session.add(new_plan)
+    session.commit()
+    session.refresh(new_plan)
+    return new_plan
 
 
-@app.put("/courses/{course_id}")
-def update_course(
-    course_id: str,
-    project: CourseCreate,
+@app.put("/plans/{plan_id}")
+def update_plan(
+    plan_id: str,
+    payload: PlanCreate,
     user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
-    try:
-        existing = session.get(Course, course_id)
-        if not existing or existing.owner_id != user.id:
-            raise HTTPException(status_code=404, detail="Course not found or no permission.")
+    existing = session.get(Plan, plan_id)
+    if not existing or existing.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Plan not found or no permission")
 
-        existing.title = project.title
-        existing.content = project.content
-        existing.is_public = project.is_public
-        session.add(existing)
-        session.commit()
-        session.refresh(existing)
-        return existing
-    except HTTPException:
-        raise
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
+    existing.title = payload.title
+    existing.goal = payload.goal
+    existing.cues = payload.cues
+    existing.level = payload.level
+    existing.is_public = payload.is_public
+    session.add(existing)
+    session.commit()
+    session.refresh(existing)
+    return existing
 
 
-@app.get("/admin/courses")
-def get_all_courses(
+@app.delete("/plans/{plan_id}")
+def delete_my_plan(
+    plan_id: str,
+    user: User = Depends(get_current_user),
+    session: Session = Depends(get_session),
+):
+    existing = session.get(Plan, plan_id)
+    if not existing or existing.owner_id != user.id:
+        raise HTTPException(status_code=404, detail="Plan not found or no permission")
+
+    session.delete(existing)
+    session.commit()
+    return {"status": "success"}
+
+
+@app.get("/admin/plans")
+def get_all_plans(
     admin_user: User = Depends(require_admin),
     session: Session = Depends(get_session),
 ):
-    try:
-        courses = session.exec(
-            select(Course)
-            .where(Course.title != "__DRAFT_STATE__")
-            .order_by(Course.created_at.desc())
-        ).all()
-        return enrich_courses_with_owner(courses, session)
-    except Exception:
-        return []
+    plans = session.exec(select(Plan).order_by(Plan.created_at.desc())).all()
+    return enrich_plans_with_owner(plans, session)
 
 
-@app.delete("/admin/courses/{course_id}")
-def delete_course(
-    course_id: str,
+@app.delete("/admin/plans/{plan_id}")
+def delete_plan_as_admin(
+    plan_id: str,
     admin_user: User = Depends(require_admin),
     session: Session = Depends(get_session),
 ):
-    try:
-        existing = session.get(Course, course_id)
-        if existing:
-            session.delete(existing)
-            session.commit()
-        return {"status": "success"}
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
-
-
-@app.delete("/courses/{course_id}")
-def delete_my_course(
-    course_id: str,
-    user: User = Depends(get_current_user),
-    session: Session = Depends(get_session),
-):
-    try:
-        existing = session.get(Course, course_id)
-        if not existing or existing.owner_id != user.id:
-            raise HTTPException(status_code=404, detail="Course not found or no permission.")
-
+    existing = session.get(Plan, plan_id)
+    if existing:
         session.delete(existing)
         session.commit()
-        return {"status": "success"}
-    except HTTPException:
-        raise
-    except Exception as exc:
-        session.rollback()
-        raise HTTPException(status_code=500, detail=str(exc))
+    return {"status": "success"}

@@ -9,7 +9,6 @@
 Recommended variables:
 
 ```env
-GEMINI_API_KEY=
 JWT_SECRET_KEY=change-me-for-local-dev
 ADMIN_EMAIL=admin@example.com
 DATABASE_URL=sqlite:///./app.db
@@ -46,19 +45,22 @@ Expected:
 
 ### Rate-limit headers
 ```bash
-curl -i http://localhost:8000/courses
+curl -i http://localhost:8000/plans
 ```
 
 Check for:
+
 - `X-RateLimit-Limit`
 - `X-RateLimit-Remaining`
 
 ### Frontend
 Open:
+
 - `http://localhost:8501`
 
 ### API docs
 Open:
+
 - `http://localhost:8000/docs`
 
 ### Worker logs
@@ -85,32 +87,22 @@ uv run python -m scripts.migrate
 ```
 
 ## Seeding sample data
-After the API container is up, seed sample users and courses from inside the running container:
-
-```bash
-docker compose exec api python scripts/seed.py
-```
-
-Or locally without Docker:
-
 ```bash
 uv run python scripts/seed.py
 ```
 
 ## Running tests locally
-Run all tests locally with `uv`:
-
 ```bash
 uv run pytest
 ```
 
-Run only the API tests:
+Run only API tests:
 
 ```bash
 uv run pytest tests/test_api.py
 ```
 
-Run only the worker tests:
+Run only worker tests:
 
 ```bash
 uv run pytest tests/test_worker.py
@@ -122,25 +114,6 @@ Run only the Schemathesis contract tests:
 uv run pytest tests/test_openapi.py
 ```
 
-## Running pytest and Schemathesis in CI
-GitHub Actions CI is defined in `.github/workflows/ci.yml`.
-
-The CI job performs these commands:
-
-```bash
-uv sync
-uv run python -m scripts.migrate
-uv run pytest tests/test_api.py
-uv run pytest tests/test_worker.py
-uv run pytest tests/test_openapi.py
-```
-
-Why this works in CI:
-- the Alembic migration step creates the SQLite schema reproducibly,
-- API tests validate auth, CRUD, role checks, and token-expiry behavior,
-- worker tests validate retries and idempotency behavior,
-- Schemathesis loads the ASGI app directly and validates public OpenAPI routes without needing a separately hosted server.
-
 ## Capturing the Redis trace excerpt required for EX3 notes
 After the stack is healthy, inject a real Redis monitor excerpt into `docs/EX3-notes.md`:
 
@@ -148,24 +121,17 @@ After the stack is healthy, inject a real Redis monitor excerpt into `docs/EX3-n
 uv run python scripts/capture_trace_excerpt.py
 ```
 
-Important:
-- the capture script now refuses to overwrite `docs/EX3-notes.md` if Docker is unavailable,
-- it also refuses to write when no real Redis MONITOR lines were captured,
-- keep the placeholder block only temporarily,
-- before submission, confirm that `docs/EX3-notes.md` contains a **real** local excerpt.
+Before submission, confirm that `docs/EX3-notes.md` contains a **real** local excerpt.
 
 ## Resetting local state
-If you want a clean local reset:
-
 ```bash
 docker compose down -v
 rm -f app.db
 ```
 
-Then bring the stack up again.
-
 ## Submission hygiene
 Do not submit or commit:
+
 - `.env`
 - `.venv/`
 - `.pytest_cache/`
