@@ -418,6 +418,7 @@ def get_course(
     except Exception as exc:
         raise HTTPException(status_code=500, detail=str(exc))
 
+
 @app.post("/courses")
 def save_course(
     project: CourseCreate,
@@ -438,6 +439,7 @@ def save_course(
     except Exception as exc:
         session.rollback()
         raise HTTPException(status_code=500, detail=str(exc))
+
 
 @app.put("/courses/{course_id}")
 def update_course(
