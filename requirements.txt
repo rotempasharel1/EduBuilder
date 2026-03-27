@@ -22,3 +22,5 @@ hypothesis
 schemathesis
 httpx
 python-multipart
+
+email-validator
