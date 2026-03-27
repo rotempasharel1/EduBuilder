@@ -8,6 +8,7 @@ Show a clean FastAPI backend for one core resource: `Course`.
 ## Files used for EX1
 - `backend/main_ex1.py`
 - `tests/test_ex1_api.py`
+- `docs/EX1-notes.md`
 
 ## Local setup
 ```bash
@@ -32,14 +33,22 @@ uv run uvicorn backend.main_ex1:app --reload
 - health endpoint: `GET /health`
 - no authentication
 - simple in-memory data store
-- pytest coverage for the happy-path CRUD flow
+- pytest coverage for listing and create/update/delete happy-path flows
 
 ## Tests
 ```bash
 uv run pytest tests/test_ex1_api.py
 ```
 
-## Why this file exists
-The full project later evolved into EX3 and includes authentication, SQLite persistence, Redis, worker flows, and AI features.
+## Notes on scope
+The full repository later evolved into EX3 and includes authentication, SQLite persistence, Redis, worker flows, and AI features.
 
-For the EX1 presentation, this file keeps the scope exactly on the backend foundations required by the assignment.
+For the EX1 grading scope, `backend/main_ex1.py` keeps the implementation small and focused on the backend foundations required by the assignment.
+
+## AI Assistance
+AI tools were used to:
+- review route naming and response consistency,
+- tighten the README and notes wording,
+- sanity-check the CRUD test coverage.
+
+All suggested changes were manually reviewed and verified locally through code inspection and pytest.

@@ -1,36 +1,37 @@
 # EduBuilder
 
-EduBuilder is a small, local-first **course builder and course catalog** built across EX1–EX3 around one consistent domain.
+EduBuilder is a small, local-first **course builder and course catalog** developed as one continuous domain across **EX1–EX3**.
 
-The project stays within the course scope guardrail: it runs on a single laptop, uses simple local services, and avoids cloud deployment requirements. The final EX3 version combines a FastAPI backend, SQLite persistence through SQLModel and Alembic, a Streamlit interface, Redis, and an async worker.
+The project is intentionally scoped to run on a single laptop and to stay aligned with the course guardrail: local development, simple architecture, reproducible setup, and no cloud deployment requirement.
 
 ## Assignment mapping
 
-### EX1 – Backend foundation submission
+### EX1 – FastAPI Foundations (Backend)
 Use these files for the EX1 grading scope:
 - `backend/main_ex1.py`
 - `tests/test_ex1_api.py`
 - `docs/EX1-notes.md`
 
-EX1 provides the minimal FastAPI CRUD backend for the core `Course` resource:
+EX1 provides a clean FastAPI backend for one core resource, `Course`, with:
 - in-memory storage,
 - Pydantic validation,
 - CRUD endpoints,
-- pytest coverage for happy-path CRUD behavior,
+- pytest coverage for the happy-path backend flow,
 - no authentication.
 
-### EX2 – Friendly interface submission
+### EX2 – Friendly Interface (Frontend connected to Backend)
 Use these files for the EX2 grading scope:
 - `frontend/app_ex2.py`
+- `backend/main_ex1.py`
 - `docs/EX2-notes.md`
 
-EX2 provides the lightweight Streamlit interface that reuses the EX1 API shape:
+EX2 provides a lightweight Streamlit interface that reuses the EX1 API shape:
 - list existing courses immediately,
 - add a new course in one screen,
 - no login or security prompts,
 - one small extra: visible course count and CSV export.
 
-### EX3 – Full-stack microservices submission
+### EX3 – Full-Stack Microservices Final Project (KISS)
 Use these files for the EX3 grading scope:
 - `backend/main.py`
 - `frontend/app.py`
@@ -43,6 +44,7 @@ Use these files for the EX3 grading scope:
 - `tests/test_api.py`
 - `tests/test_worker.py`
 - `tests/test_openapi.py`
+- `.github/workflows/ci.yml`
 
 EX3 provides the integrated local stack:
 - SQLite persistence via SQLModel and Alembic,
@@ -55,10 +57,10 @@ EX3 provides the integrated local stack:
 ## Main features
 - **FastAPI backend** with local SQLite storage.
 - **Alembic migrations** for reproducible database setup.
-- **JWT authentication** for creating, editing, deleting, and draft-management flows.
+- **JWT authentication** for protected create, edit, delete, and draft-management flows.
 - **Role-aware authorization** for admin-only routes.
 - **Streamlit UI** for browsing shared courses and managing personal course content.
-- **Redis rate limiting** with standard response headers.
+- **Redis rate limiting** with response headers.
 - **Async worker** with bounded concurrency, retries, and Redis-backed idempotency.
 - **Schemathesis contract testing** against the OpenAPI schema.
 
@@ -121,15 +123,13 @@ EduBuilder/
 ### Authenticated user
 - `GET /me`
 - `GET /courses/my`
+- `POST /courses`
 - `PUT /courses/{course_id}`
 - `DELETE /courses/{course_id}`
 - `POST /chat/generate_course`
 - `POST /chat/draft`
 - `GET /chat/draft`
 - `DELETE /chat/draft`
-
-### Public-or-guest create flow
-- `POST /courses`
 
 ### Admin
 - `GET /admin/only`
@@ -159,11 +159,6 @@ WORKER_MAX_CONCURRENCY=3
 WORKER_MAX_RETRIES=3
 WORKER_RETRY_DELAY_SECONDS=2
 ```
-
-Notes:
-- `GEMINI_API_KEY` is optional. Without it, AI-related flows fall back to non-LLM behavior where supported.
-- `JWT_SECRET_KEY` should be rotated if shared accidentally.
-- Do not commit `.env`, `app.db`, or virtual environment folders.
 
 ## Local development with uv
 
@@ -278,8 +273,6 @@ The pipeline:
 5. runs worker tests,
 6. runs Schemathesis contract tests.
 
-This provides a concrete CI path for `pytest` and contract validation.
-
 ## Demo flow for graders
 
 A simple local demo script is included:
@@ -291,9 +284,9 @@ Suggested grading flow:
 1. Start the stack.
 2. Open `/docs` for the API and `/health` for readiness.
 3. Open the Streamlit frontend.
-4. Browse shared courses anonymously.
-5. Register a user and create a private course.
-6. Share that course and verify that it appears in the public catalog.
+4. Browse shared courses.
+5. Register a user and create a course.
+6. Verify public/shared course behavior.
 7. Check admin-only route behavior.
 8. Inspect Redis-backed rate limiting, worker idempotency, and the trace excerpt captured in `docs/EX3-notes.md`.
 
@@ -313,7 +306,7 @@ Suggested grading flow:
 - Do **not** commit `.env`, `venv/`, `.venv/`, `.pytest_cache/`, or `.hypothesis/`.
 
 ## Enhancement implemented for EX3
-The chosen enhancement is a **weekly digest / recommendation summary** for courses. A background worker scans public courses, generates a short digest, and avoids repeated work through Redis-backed idempotency keys. This keeps the product useful without expanding the scope into a large distributed system.
+The chosen enhancement is a **weekly digest / recommendation summary** for courses. A background worker scans public courses, generates a short digest, and avoids repeated work through Redis-backed idempotency keys.
 
 ## Redis trace excerpt workflow
 A helper script is included to refresh the checked-in **Redis trace excerpt** in `docs/EX3-notes.md` after a local Compose run:
@@ -326,8 +319,6 @@ Run it after `docker compose up` so the notes file contains a real local Redis m
 - rate-limit key activity,
 - request-driven Redis commands,
 - worker idempotency key activity.
-
-The capture script now **refuses to overwrite** `docs/EX3-notes.md` when Docker is unavailable or when it did not capture real Redis monitor lines. That protects the submission notes from being replaced with a broken placeholder.
 
 ## AI Assistance
 AI tools were used as pair-programming aids for:

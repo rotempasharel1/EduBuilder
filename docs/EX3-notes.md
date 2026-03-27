@@ -41,7 +41,7 @@ The EX3 database is reproducible through migrations plus seed data. SQLite artif
 Implemented in `frontend/app.py`.
 
 Responsibilities:
-- browse shared courses immediately, even before signing in,
+- browse shared courses,
 - sign in or register,
 - create and edit courses through the backend API,
 - trigger AI-assisted drafting,
@@ -188,23 +188,19 @@ uv run python scripts/capture_trace_excerpt.py
 ```
 
 Important:
-- do **not** submit the broken Docker-error excerpt that was previously checked in,
+- do **not** submit a broken Docker-error excerpt,
 - do **not** submit a placeholder as the final state,
 - only keep the generated block below after a successful local Compose run.
 
 <!-- TRACE_EXCERPT_START -->
 
 ```text
-Trace excerpt not refreshed yet.
+PLACEHOLDER ONLY.
 
-Run:
+Before submitting EX3, run:
 uv run python scripts/capture_trace_excerpt.py
 
-Expected result:
-- Redis MONITOR lines appear here
-- worker-trigger output appears here
-- redis-monitor-stderr is empty or minimal
-
+This script will replace this block with a real local Redis monitor excerpt.
 Do not submit this placeholder block as the final EX3 artifact.
 ```
 
@@ -233,7 +229,16 @@ Before submitting, verify that the repository or ZIP does **not** include:
 
 Also verify that all required files are committed and pushed to the GitHub repository.
 
-## 12. External checks that cannot be proven from code alone
+## 12. AI Assistance
+AI tools were used to:
+- review the EX3 structure against the assignment brief,
+- tighten documentation and runbook wording,
+- spot mismatches between the repository notes and the implemented API/auth flows,
+- sanity-check the final submission checklist.
+
+All suggested changes were manually reviewed. Runtime-dependent items such as the Redis trace excerpt and the Compose workflow still require local execution and verification before submission.
+
+## 13. External checks that cannot be proven from code alone
 These items must still be verified manually because they are external to the codebase:
 - AWS Academy prerequisite completion,
 - whether a bonus screen capture was recorded,

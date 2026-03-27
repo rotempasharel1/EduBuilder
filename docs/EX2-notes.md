@@ -24,27 +24,27 @@ uv run uvicorn backend.main_ex1:app --reload
 uv run streamlit run frontend/app_ex2.py
 ```
 
-## Alternative run
-If you want to demonstrate EX2 against the richer EX3 backend, you can also use:
-
-```bash
-uv run uvicorn backend.main:app --reload
-uv run streamlit run frontend/app_ex2.py
-```
-
 ## What this version includes
-- lists existing courses immediately
-- allows adding a new course in one screen
-- no login or security prompts in the UI
+- lists existing courses immediately,
+- allows adding a new course in one screen,
+- no login or security prompts,
 - one small extra:
-  - visible course count
-  - CSV export of the current catalog
+  - visible course count,
+  - CSV export of the current catalog.
 
 ## Expected local URLs
 - API: `http://127.0.0.1:8000`
 - Streamlit: `http://127.0.0.1:8501`
 
-## Why this file exists
+## Notes on scope
 The main EX3 frontend is richer and includes sign-in, private courses, admin features, and AI-assisted flows.
 
-For the EX2 presentation, `frontend/app_ex2.py` keeps the interface focused and fast to demonstrate in under a minute from launch.
+For the EX2 grading scope, `frontend/app_ex2.py` keeps the interface focused and fast to demonstrate in under a minute from launch.
+
+## AI Assistance
+AI tools were used to:
+- improve the wording and structure of the user-facing copy,
+- review the Streamlit layout for a faster demo flow,
+- check that the extra feature stayed small and in scope.
+
+All suggestions were manually reviewed and verified locally against the running API.

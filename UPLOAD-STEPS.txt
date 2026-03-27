@@ -1,0 +1,18 @@
+Recommended order:
+
+1. Replace these files in the repository:
+   - README.md
+   - docs/EX1-notes.md
+   - docs/EX2-notes.md
+   - docs/EX3-notes.md
+
+2. Then run locally from the project root:
+   docker compose up -d --build
+   uv run python scripts/capture_trace_excerpt.py
+
+3. Confirm that docs/EX3-notes.md no longer contains the placeholder block.
+
+4. Run tests:
+   uv run pytest
+
+5. Commit and push.
