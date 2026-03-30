@@ -55,16 +55,19 @@ def build_trace_excerpt(base_url: str) -> str:
     return _capture_fallback_http_trace(base_url)
 
 
-def inject_excerpt(notes_path: Path, excerpt_block: str) -> None:
-    content = notes_path.read_text(encoding="utf-8")
-    start = content.find(START_MARKER)
-    end = content.find(END_MARKER)
-    if start == -1 or end == -1:
-        raise RuntimeError("Trace markers were not found in docs/EX3-notes.md")
-    start += len(START_MARKER)
-    new_content = content[:start] + "\n\n" + excerpt_block + "\n\n" + content[end:]
-    notes_path.write_text(new_content, encoding="utf-8")
+from pathlib import Path
 
+def inject_excerpt(notes_path: Path, excerpt: str) -> None:
+    placeholder = "[PASTE LOCAL TRACE EXCERPT HERE]"
+    content = notes_path.read_text(encoding="utf-8")
+
+    if placeholder not in content:
+        raise RuntimeError(
+            "Placeholder was not found in docs/EX3-notes.md"
+        )
+
+    updated = content.replace(placeholder, excerpt)
+    notes_path.write_text(updated, encoding="utf-8")
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Capture a local trace excerpt into docs/EX3-notes.md.")
